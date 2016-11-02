@@ -21,6 +21,7 @@ public:
 
 	unsigned int timeToRelease(LONGLONG llTime,LONGLONG llFeqQuart);
 
+	void clear();
 public:
 	static DWORD s_BlockFlag;//±êÖ¾Î»¡£
 private:

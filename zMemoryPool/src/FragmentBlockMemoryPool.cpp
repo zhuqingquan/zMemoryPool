@@ -6,6 +6,7 @@ using namespace zTools;
 FragmentBlockMemoryPool::FragmentBlockMemoryPool(void) : m_freqQuart(0)
 				,m_hThread(NULL)
 				,m_bRuning(true)
+				, m_hit(0), m_loss(0)
 {
 	LARGE_INTEGER freq;
 	int ret = ::QueryPerformanceFrequency(&freq);
@@ -19,7 +20,7 @@ FragmentBlockMemoryPool::~FragmentBlockMemoryPool(void)
 	m_bRuning = false;
 	WaitForSingleObject(m_hThread, INFINITE);
 	CloseHandle(m_hThread);
-	clearPool();
+	purgePool();
 }
 
 unsigned int calsize(unsigned int need, const std::vector<unsigned int>& sortedLine)
@@ -126,10 +127,11 @@ void* FragmentBlockMemoryPool::malloc( std::size_t memorySize)
 		else
 		{
 			pFragmentBlockPool = new FragmentBlockPool(size);
-			pair<unsigned int, FragmentBlockPool*>key_value;
-			key_value.first = size;
-			key_value.second = pFragmentBlockPool;
-			m_blockMap.insert(key_value);
+			m_blockMap[size] = pFragmentBlockPool;
+			//pair<unsigned int, FragmentBlockPool*>key_value;
+			//key_value.first = size;
+			//key_value.second = pFragmentBlockPool;
+			//m_blockMap.insert(key_value);
 		}
 		m_lock.unlock();
 
@@ -146,6 +148,11 @@ void* FragmentBlockMemoryPool::malloc( std::size_t memorySize)
 		m_lock.lock();
 		this->m_uiAllMemorySize += uiSizeOfNew;
 		m_lock.unlock();
+		InterlockedIncrement64(&m_loss);
+	}
+	else
+	{
+		InterlockedIncrement64(&m_hit);
 	}
 	return pDW;
 }
@@ -178,11 +185,11 @@ void FragmentBlockMemoryPool::free( void *ptr )
 }
 
 /**
- * Method		clearPool
+ * Method		purgePool
  * @brief		清空内存池，返还给系统
  * @return		void
  */
-void FragmentBlockMemoryPool::clearPool()
+void FragmentBlockMemoryPool::purgePool()
 {
 	map<unsigned int, FragmentBlockPool*>::iterator iter;
 	FragmentBlockPool *pFragmentBlockPool = NULL;
@@ -192,7 +199,7 @@ void FragmentBlockMemoryPool::clearPool()
 		++iter)
 	{
 		pFragmentBlockPool = iter->second;
-		delete pFragmentBlockPool;
+		pFragmentBlockPool->clear();
 	}
 	m_blockMap.clear();
 	m_lock.unlock();
@@ -232,7 +239,7 @@ void FragmentBlockMemoryPool::timeToFreeThreadCallback()
 	FragmentBlockPool *pFragmentBlockPool = NULL;
 	LARGE_INTEGER systemTime;
 	unsigned int uiReleaseSize = 0;
-	unsigned int uiHalfMaxMemorySize = m_uiMaxMemorySize / 2;
+	//unsigned int uiHalfMaxMemorySize = m_uiMaxMemorySize / 2;
 	while(true == m_bRuning)
 	{
 		Sleep(10);
@@ -242,7 +249,7 @@ void FragmentBlockMemoryPool::timeToFreeThreadCallback()
 		count = 0;
 		uiReleaseSize = 0;
 		m_lock.lock_shared();
-		if(m_uiAllMemorySize < uiHalfMaxMemorySize)
+		if(m_uiAllMemorySize < m_uiMaxMemorySize)
 		{
 			m_lock.unlock_shared();
 			continue;

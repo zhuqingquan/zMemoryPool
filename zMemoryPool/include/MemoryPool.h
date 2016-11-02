@@ -84,10 +84,10 @@ namespace zTools
 		virtual void free( void *ptr ) = 0;
 
 		/**
-			* Method		clearPool
+			* Method		purgePool
 			* @brief		清空内存池，返还给系统
 			*/
-		virtual void clearPool() = 0;
+		virtual void purgePool() = 0;
 
 		/*
 			* 获取向系统申请的内存的总和。

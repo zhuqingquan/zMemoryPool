@@ -16,9 +16,7 @@ FragmentBlockPool::FragmentBlockPool(unsigned int uiBlockSize) :
 
 FragmentBlockPool::~FragmentBlockPool(void)
 {	
-	m_lock.lock();
-	releaseAllBlock();
-	m_lock.unlock();
+	clear();
 }
 
 int FragmentBlockPool::releaseAllBlock()
@@ -31,7 +29,8 @@ int FragmentBlockPool::releaseAllBlock()
 	{
 		pDW = *iter;
 		pDW -= 2;
-		delete pDW;
+		//delete pDW;
+		free(pDW);
 		count ++;
 	}
 	m_pMemory.clear();
@@ -99,7 +98,7 @@ int FragmentBlockPool::releaseByCount(int count)
 DWORD *FragmentBlockPool::newBlock()
 {
 	//unsigned int size = m_uiBlockSize / sizeof(DWORD) + 1 + 2;
-	DWORD *pRet = new DWORD[m_uiNewDWORDCountOfBlock];
+	DWORD *pRet = (DWORD*)malloc(m_uiNewDWORDCountOfBlock*sizeof(DWORD));//new DWORD[m_uiNewDWORDCountOfBlock];
 	*pRet++ = s_BlockFlag;
 	*pRet++ = m_uiBlockSize;
 	return pRet;
@@ -179,4 +178,11 @@ unsigned int FragmentBlockPool::timeToRelease(LONGLONG llTime,LONGLONG llFeqQuar
 	m_lock.unlock();
 	unsigned int size = (unsigned int)countOfRelease * m_uiNewSizeOfBlock;
 	return size;
+}
+
+void zTools::FragmentBlockPool::clear()
+{
+	m_lock.lock();
+	releaseAllBlock();
+	m_lock.unlock();
 }

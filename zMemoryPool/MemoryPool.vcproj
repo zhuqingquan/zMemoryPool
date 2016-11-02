@@ -327,6 +327,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\MediaMemPool.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\MemoryPool.cpp"
 				>
 			</File>
@@ -342,6 +346,10 @@
 			</File>
 			<File
 				RelativePath=".\include_pri\FragmentBlockPool.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\MediaMemPool.h"
 				>
 			</File>
 			<File
