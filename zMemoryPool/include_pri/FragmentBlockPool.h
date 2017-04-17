@@ -2,7 +2,14 @@
 #ifndef _ZTOOLS_FRAGMEN_BLOCK_POOL_H_
 #define _ZTOOLS_FRAGMEN_BLOCK_POOL_H_
 
+#ifdef _WINDOWS
 #include <windows.h>
+#else
+typedef unsigned int DWORD;
+typedef long long LONGLONG;
+#endif
+
+#include <inttypes.h>
 #include <vector>
 #include <boost/thread/mutex.hpp>
 
@@ -16,20 +23,33 @@ public:
 	FragmentBlockPool(unsigned int uiBlockSize);
 	~FragmentBlockPool(void);
 
-	DWORD *getBlock(LONGLONG llTime,unsigned int &uiSizeOfNew);
+	DWORD* getBlock(unsigned int &uiSizeOfNew);
 	int releaseBlock(DWORD *pBlock);
 
-	unsigned int timeToRelease(LONGLONG llTime,LONGLONG llFeqQuart);
+    /**
+     * @name    timeToRelease
+     * @brief   Free the block that not use in delta milliseconds to the last time call releaseBlock.
+     * @param[in] time of now
+     * @param[in] int delta dalta milliseconds
+     * @return unsigned int Bytes count freed.
+     **/
+	unsigned int timeToRelease(int llTime, int delta);
 
-	void clear();
+	int clear();
 public:
+    struct FragBlockHead
+    {
+        unsigned int flag;
+        unsigned int size;
+        unsigned int ts;    //timestamp of free
+    };
 	static DWORD s_BlockFlag;//±êÖ¾Î»¡£
 private:
 	DWORD *newBlock();
 	int releaseAllBlock();
-	int releaseBlockToHalf();
-	int releaseBlockToOne();
-	int releaseByCount(int count);
+	//int releaseBlockToHalf();
+	//int releaseBlockToOne();
+	//int releaseByCount(int count);
 private:
 	
 	unsigned int m_uiBlockSize;
@@ -37,7 +57,7 @@ private:
 	unsigned int m_uiNewDWORDCountOfBlock;
 	vector<DWORD*> m_pMemory;
 	boost::mutex m_lock;
-	LONGLONG m_llLastUseTime;
+	int m_llLastUseTime;
 };
 
 }//namespace zTools

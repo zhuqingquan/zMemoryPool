@@ -25,7 +25,7 @@ namespace zTools
 	class MemPoolInitParam
 	{
 	public:
-		virtual ~MemPoolInitParam() = 0 {};
+		virtual ~MemPoolInitParam() = 0;
 	};
 
 	/**

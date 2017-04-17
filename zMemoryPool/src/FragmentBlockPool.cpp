@@ -4,14 +4,14 @@ using namespace zTools;
 
 DWORD FragmentBlockPool::s_BlockFlag = 0xf83e65a3;
 
-FragmentBlockPool::FragmentBlockPool(unsigned int uiBlockSize) :
-				m_uiBlockSize(uiBlockSize)
-				,m_uiNewSizeOfBlock(0)
-				,m_uiNewDWORDCountOfBlock(0)
-				,m_llLastUseTime(0)
+FragmentBlockPool::FragmentBlockPool(unsigned int uiBlockSize) 
+: m_uiBlockSize(uiBlockSize)
+, m_uiNewSizeOfBlock(0)
+, m_uiNewDWORDCountOfBlock(0)
+, m_llLastUseTime(0)
 {
-	m_uiNewDWORDCountOfBlock = m_uiBlockSize / sizeof(DWORD) + 1 + 2;
-	m_uiNewSizeOfBlock = m_uiNewDWORDCountOfBlock * sizeof(DWORD);
+	m_uiNewDWORDCountOfBlock = m_uiBlockSize / sizeof(DWORD) + 1;
+	m_uiNewSizeOfBlock = m_uiNewDWORDCountOfBlock * sizeof(DWORD) + sizeof(FragBlockHead);
 }
 
 FragmentBlockPool::~FragmentBlockPool(void)
@@ -22,21 +22,21 @@ FragmentBlockPool::~FragmentBlockPool(void)
 int FragmentBlockPool::releaseAllBlock()
 {
 	DWORD *pDW = NULL;
-	int count = 0;
+	int bytescount = 0;
 	for(vector<DWORD*>::iterator iter = m_pMemory.begin();
 		iter != m_pMemory.end();
 		++iter)
 	{
 		pDW = *iter;
-		pDW -= 2;
-		//delete pDW;
-		free(pDW);
-		count ++;
+        FragBlockHead* pHead = (FragBlockHead*)pDW;
+        pHead--;
+        bytescount += pHead->size;
+		free(pHead);
 	}
 	m_pMemory.clear();
-	return count;
+	return bytescount;
 }
-
+/*
 int FragmentBlockPool::releaseBlockToHalf()
 {
 	int count = m_pMemory.size();
@@ -94,17 +94,21 @@ int FragmentBlockPool::releaseByCount(int count)
 	}
 	return retCount;
 }
-
+*/
 DWORD *FragmentBlockPool::newBlock()
 {
-	//unsigned int size = m_uiBlockSize / sizeof(DWORD) + 1 + 2;
-	DWORD *pRet = (DWORD*)malloc(m_uiNewDWORDCountOfBlock*sizeof(DWORD));//new DWORD[m_uiNewDWORDCountOfBlock];
-	*pRet++ = s_BlockFlag;
-	*pRet++ = m_uiBlockSize;
-	return pRet;
+	//DWORD *pRet = (DWORD*)malloc(m_uiNewDWORDCountOfBlock*sizeof(DWORD));//new DWORD[m_uiNewDWORDCountOfBlock];
+	//*pRet++ = s_BlockFlag;
+	//*pRet++ = m_uiBlockSize;
+	FragBlockHead *pRet = (FragBlockHead*)malloc(m_uiNewSizeOfBlock);
+    pRet->flag = s_BlockFlag;
+    pRet->size = m_uiBlockSize;
+    pRet->ts = 0;
+    pRet++;
+	return (DWORD*)pRet;
 }
 
-DWORD *FragmentBlockPool::getBlock(LONGLONG llTime,unsigned int &uiSizeOfNew)
+DWORD *FragmentBlockPool::getBlock(unsigned int &uiSizeOfNew)
 {
 	DWORD *pRet = NULL;
 	uiSizeOfNew = 0;
@@ -121,7 +125,6 @@ DWORD *FragmentBlockPool::getBlock(LONGLONG llTime,unsigned int &uiSizeOfNew)
 		pRet = ref;
 		m_pMemory.pop_back();
 	} while (false);
-	m_llLastUseTime = llTime;
 	m_lock.unlock();
 	return pRet;
 }
@@ -134,55 +137,54 @@ int FragmentBlockPool::releaseBlock(DWORD *pBlock)
 	return 0;
 }
 
-unsigned int FragmentBlockPool::timeToRelease(LONGLONG llTime,LONGLONG llFeqQuart)
+unsigned int FragmentBlockPool::timeToRelease(int llTime, int delta)
 {
-	int ret;
 	int countOfRelease = 0;
 	m_lock.lock();
-	ret = m_pMemory.size();
-	if(20 < ret)
-	{
-		ret = ret - 20;
-		ret = ret > 5 ? 5: ret;
-		countOfRelease += releaseByCount(ret);
-	}
-	ret = (llTime - m_llLastUseTime) / llFeqQuart;//秒
-	if(0 < m_pMemory.size())
-	{
-		if(2*1024*1024 + 100 >= m_uiBlockSize)
-		{
-			//2M以内的处理
-			if(10 < ret)
-			{
-				countOfRelease += releaseAllBlock();
-			}
-		}
-		else
-		{
-			if(5 < ret)
-			{
-				countOfRelease += releaseAllBlock();
-			}
-			else if(3 < ret)
-			{
-				countOfRelease += releaseBlockToOne();
-			}
-			else if(1 < ret)
-			{
-				countOfRelease += releaseBlockToHalf();
-			}
-		}
-
-	}
-
+    for (size_t i = 0; i < m_pMemory.size(); i++) 
+    {
+        DWORD* pBlock = m_pMemory[i];
+        FragBlockHead* pHead = (FragBlockHead*)pBlock;
+        pHead--;
+        int realdelta = llTime - pHead->ts;
+        if(realdelta<delta)
+            continue;
+        countOfRelease += pHead->size;
+        free(pHead);
+        m_pMemory[i] = NULL;
+    }
+    size_t h = 0;
+    size_t t = m_pMemory.size() <= 0 ? 0 : m_pMemory.size() - 1;
+    while(h<t)
+    {
+        while(m_pMemory[h]!=NULL)
+        {
+            h++;
+        }
+        while(m_pMemory[t]==NULL)
+        {
+            t--;
+        }
+        if(h<t)
+        {
+            DWORD* tmp = m_pMemory[h];
+            m_pMemory[h] = m_pMemory[t];
+            m_pMemory[t] = tmp;
+        }
+    }
+    while(m_pMemory.back()==NULL)
+    {
+        m_pMemory.pop_back();
+    }
 	m_lock.unlock();
 	unsigned int size = (unsigned int)countOfRelease * m_uiNewSizeOfBlock;
-	return size;
+	return countOfRelease;
 }
 
-void zTools::FragmentBlockPool::clear()
+int zTools::FragmentBlockPool::clear()
 {
+    int ret = 0;
 	m_lock.lock();
-	releaseAllBlock();
+	ret = releaseAllBlock();
 	m_lock.unlock();
 }

@@ -6,7 +6,12 @@
 #include <map>
 #include "FragmentBlockPool.h"
 #include <boost/thread/shared_mutex.hpp>
+#include <boost/thread.hpp>
+#include <boost/date_time/posix_time/posix_time_types.hpp>
+#ifdef _WINDOWS
 #include <windows.h>
+#endif
+#include <inttypes.h>
 
 namespace zTools
 {
@@ -71,9 +76,11 @@ private:
 	FragmentBlockMemPoolInitParam m_initparam;
 	map<unsigned int, FragmentBlockPool*> m_blockMap;
 	boost::shared_mutex m_lock;
-	LONGLONG m_freqQuart;
-	HANDLE m_hThread;
-	bool m_bRuning;
+    boost::posix_time::ptime m_startTs;
+	//LONGLONG m_freqQuart;
+    //HANDLE m_hThread;
+    boost::thread* m_hThread;
+    bool m_bRuning;
 	LONGLONG m_hit;
 	LONGLONG m_loss;
 };

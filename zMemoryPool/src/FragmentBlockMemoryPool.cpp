@@ -3,23 +3,31 @@
 
 using namespace zTools;
 
-FragmentBlockMemoryPool::FragmentBlockMemoryPool(void) : m_freqQuart(0)
-				,m_hThread(NULL)
-				,m_bRuning(true)
-				, m_hit(0), m_loss(0)
+FragmentBlockMemoryPool::FragmentBlockMemoryPool(void) 
+: m_hThread(NULL)
+, m_bRuning(true)
+, m_hit(0), m_loss(0)
 {
-	LARGE_INTEGER freq;
-	int ret = ::QueryPerformanceFrequency(&freq);
-	m_freqQuart = freq.QuadPart;
+	//LARGE_INTEGER freq;
+	//int ret = ::QueryPerformanceFrequency(&freq);
+	//m_freqQuart = freq.QuadPart;
+    m_startTs = boost::posix_time::microsec_clock::local_time();//get start ts when pool create.
 
-	m_hThread = CreateThread(NULL,0,(LPTHREAD_START_ROUTINE)timeToFreeThread,this,0,NULL);
+	//m_hThread = CreateThread(NULL,0,(LPTHREAD_START_ROUTINE)timeToFreeThread,this,0,NULL);
+    m_hThread = new boost::thread(boost::bind(&FragmentBlockMemoryPool::timeToFreeThreadCallback, this));
 }
 
 FragmentBlockMemoryPool::~FragmentBlockMemoryPool(void)
 {
 	m_bRuning = false;
-	WaitForSingleObject(m_hThread, INFINITE);
-	CloseHandle(m_hThread);
+	//WaitForSingleObject(m_hThread, INFINITE);
+	//CloseHandle(m_hThread);
+    if(m_hThread)
+    {
+        m_hThread->join();
+        delete m_hThread;
+        m_hThread = NULL;
+    }
 	purgePool();
 }
 
@@ -139,20 +147,20 @@ void* FragmentBlockMemoryPool::malloc( std::size_t memorySize)
 			return NULL;
 	}
 
-	LARGE_INTEGER systemTime;
-	::QueryPerformanceCounter(&systemTime);
 	unsigned int uiSizeOfNew;
-	DWORD *pDW = pFragmentBlockPool->getBlock(systemTime.QuadPart, uiSizeOfNew);
+	DWORD *pDW = pFragmentBlockPool->getBlock(uiSizeOfNew);
 	if(0 < uiSizeOfNew)
 	{
 		m_lock.lock();
 		this->m_uiAllMemorySize += uiSizeOfNew;
 		m_lock.unlock();
-		InterlockedIncrement64(&m_loss);
+		//InterlockedIncrement64(&m_loss);
+        m_loss++;
 	}
 	else
 	{
-		InterlockedIncrement64(&m_hit);
+		//InterlockedIncrement64(&m_hit);
+        m_hit++;
 	}
 	return pDW;
 }
@@ -167,11 +175,11 @@ void FragmentBlockMemoryPool::free( void *ptr )
 {
 	if(NULL == ptr)
 		return;
-	DWORD *pDW = (DWORD*)ptr;
-	pDW -= 2;
-	if(*pDW++ != FragmentBlockPool::s_BlockFlag)
+	FragmentBlockPool::FragBlockHead* pBlockHead = (FragmentBlockPool::FragBlockHead*)ptr;
+	pBlockHead--;
+	if(pBlockHead->flag!= FragmentBlockPool::s_BlockFlag)
 		return ;
-	unsigned int size = (unsigned int)(*pDW++);
+	unsigned int size = (unsigned int)(pBlockHead->size);
 	map<unsigned int,FragmentBlockPool*>::iterator iter;
 	FragmentBlockPool *pFragmentBlockPool = NULL;
 	m_lock.lock_shared();
@@ -181,7 +189,13 @@ void FragmentBlockMemoryPool::free( void *ptr )
 		pFragmentBlockPool = iter->second;
 	}
 	m_lock.unlock_shared();
-	pFragmentBlockPool->releaseBlock(pDW);
+    //refresh the ts of the block that malloced before.
+    boost::posix_time::ptime nowTs = boost::posix_time::microsec_clock::local_time();
+    boost::posix_time::time_duration td = nowTs - m_startTs;
+    int durationToStart = td.total_milliseconds();
+    pBlockHead->ts = durationToStart;
+    pBlockHead++;
+	pFragmentBlockPool->releaseBlock((DWORD*)pBlockHead);
 }
 
 /**
@@ -191,6 +205,8 @@ void FragmentBlockMemoryPool::free( void *ptr )
  */
 void FragmentBlockMemoryPool::purgePool()
 {
+    //even thought this func called, there are still many memory not free that useing by user.
+    //so m_uiAllMemorySize is not equal to 0 after call this func.
 	map<unsigned int, FragmentBlockPool*>::iterator iter;
 	FragmentBlockPool *pFragmentBlockPool = NULL;
 	m_lock.lock();
@@ -199,7 +215,8 @@ void FragmentBlockMemoryPool::purgePool()
 		++iter)
 	{
 		pFragmentBlockPool = iter->second;
-		pFragmentBlockPool->clear();
+		int freedBytes = pFragmentBlockPool->clear();
+        m_uiAllMemorySize -= freedBytes;
 	}
 	m_blockMap.clear();
 	m_lock.unlock();
@@ -237,12 +254,13 @@ void FragmentBlockMemoryPool::timeToFreeThreadCallback()
 	int count = 0;
 	map<unsigned int,FragmentBlockPool*>::iterator iter;
 	FragmentBlockPool *pFragmentBlockPool = NULL;
-	LARGE_INTEGER systemTime;
+	//LARGE_INTEGER systemTime;
 	unsigned int uiReleaseSize = 0;
 	//unsigned int uiHalfMaxMemorySize = m_uiMaxMemorySize / 2;
 	while(true == m_bRuning)
 	{
-		Sleep(10);
+		//Sleep(10);
+        boost::this_thread::sleep(boost::posix_time::millisec(10));
 		count ++;
 		if(100 > count)
 			continue;
@@ -254,13 +272,17 @@ void FragmentBlockMemoryPool::timeToFreeThreadCallback()
 			m_lock.unlock_shared();
 			continue;
 		}
-		::QueryPerformanceCounter(&systemTime);
+		//::QueryPerformanceCounter(&systemTime);
+        boost::posix_time::ptime nowTs = boost::posix_time::microsec_clock::local_time();
+        boost::posix_time::time_duration toStart = nowTs - m_startTs;
+        int llToStart = toStart.total_milliseconds();
 		for(iter = m_blockMap.begin();
 			iter != m_blockMap.end();
 			++iter)
 		{
 			pFragmentBlockPool = iter->second;
-			uiReleaseSize += pFragmentBlockPool->timeToRelease(systemTime.QuadPart,m_freqQuart);
+            int delta = 1000 * 60 * 30;//30min
+			uiReleaseSize += pFragmentBlockPool->timeToRelease(llToStart, delta);
 		}
 		m_lock.unlock_shared();
 		if(0 < uiReleaseSize)

@@ -11,7 +11,7 @@ MemoryPool::MemoryPool()
 	MEMORYSTATUS status;
 	GlobalMemoryStatus(&status);
 	m_uiMaxMemorySize = status.dwAvailPhys * 0.7;
-#else ifdef WIN32
+#elif WIN32
 	//32位程序中最大分配3G
 	m_uiMaxMemorySize = 3 * 1024 * 1024 * 1024;
 #endif

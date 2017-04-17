@@ -1,0 +1,2 @@
+#define memory_pool_VERSION_MAJOR @memory_pool_VERSION_MAJOR@
+#define memory_pool_VERSION_MINOR @memory_pool_VERSION_MINOR@
