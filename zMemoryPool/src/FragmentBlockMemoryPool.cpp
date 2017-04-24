@@ -1,5 +1,6 @@
 
 #include "FragmentBlockMemoryPool.h"
+#include <stdio.h>
 
 using namespace zTools;
 
@@ -217,8 +218,9 @@ void FragmentBlockMemoryPool::purgePool()
 		pFragmentBlockPool = iter->second;
 		int freedBytes = pFragmentBlockPool->clear();
         m_uiAllMemorySize -= freedBytes;
+        printf("Release %d bytes in BlockPool %u Total now=%u\n", freedBytes, pFragmentBlockPool, m_uiAllMemorySize);
 	}
-	m_blockMap.clear();
+	//m_blockMap.clear(); //Can not clear the blockpool map item
 	m_lock.unlock();
 }
 

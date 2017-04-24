@@ -30,6 +30,8 @@ set(SRC_LIST
 
 add_library(memory_pool SHARED ${SRC_LIST})
 
+target_link_libraries(memory_pool boost_thread boost_date_time)
+
 install (TARGETS memory_pool DESTINATION bin)
 install (FILES ./include/MediaMemPool.h 
     ./include/MemoryPool.h 

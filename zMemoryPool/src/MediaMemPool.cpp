@@ -5,7 +5,16 @@
 using namespace zTools;
 
 static zTools::MemoryPool* MediaMemPoolInstance = zTools::MemoryPool::CreateMemoryPool("FragmentBlock");
+/*
+_MediaMempoolInitParam::_MediaMempoolInitParam()
+: blockSizeArray(NULL)
+, sizeArrayCount(0)
+{}
 
+_MediaMempoolInitParam::~_MediaMempoolInitParam()
+{
+}
+*/
 zTools::MemoryPool* getMemoryPoolInstance()
 {
 	return MediaMemPoolInstance;

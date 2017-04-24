@@ -172,7 +172,7 @@ unsigned int FragmentBlockPool::timeToRelease(int llTime, int delta)
             m_pMemory[t] = tmp;
         }
     }
-    while(m_pMemory.back()==NULL)
+    while(m_pMemory.size()>0 && m_pMemory.back()==NULL)
     {
         m_pMemory.pop_back();
     }
@@ -187,4 +187,5 @@ int zTools::FragmentBlockPool::clear()
 	m_lock.lock();
 	ret = releaseAllBlock();
 	m_lock.unlock();
+    return ret;
 }

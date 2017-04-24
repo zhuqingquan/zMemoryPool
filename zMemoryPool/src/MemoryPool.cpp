@@ -3,6 +3,10 @@
 
 using namespace zTools;
 
+MemPoolInitParam::~MemPoolInitParam()
+{
+}
+
 MemoryPool::MemoryPool() 
 : m_uiAllMemorySize(0)
 , m_uiMaxMemorySize(0)
