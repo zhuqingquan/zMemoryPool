@@ -6,6 +6,11 @@ project(zMemoryPool)
 set(memory_pool_VERSION_MAJOR 1)
 set(memory_pool_VERSION_MINOR 0)
 
+if(MSVC90)
+    set(BOOST_INC "${PROJECT_SOURCE_DIR}/../pcmediatrans-boost/include/boost-1_71")
+    set(BOOST_LIB "${PROJECT_SOURCE_DIR}/../pcmediatrans-boost/lib")
+endif()
+
 #configure a header file to pass some of the CMake settings
 #to the source code
 configure_file(
@@ -13,15 +18,37 @@ configure_file(
     "${PROJECT_BINARY_DIR}/memory_pool_cfg.h"
     )
 
-set(SRC_DIR ./src)
-set(INC_DIR ./include_pri "./include")
+set(SRC_DIR src)
+set(INC_DIR "include_pri" "include")
 
-include_directories("${PROJECT_BINARY_DIR}")
-include_directories("./include_pri" "./include")
+include_directories(
+	"${PROJECT_BINARY_DIR}"
+	${BOOST_INC}
+    ${INC_DIR}
+)
 
+link_directories(
+    "${BOOST_LIB}"
+)
+
+if (MSVC)
+    add_definitions(
+        -DMEMORYPOOL_EXPORT
+    )
+    if(MSVC_VERSION LESS 1600)
+        include_directories(
+            "${PROJECT_SOURCE_DIR}/../vs2008_header"
+        )
+    endif()
+endif()
 #add_subdirectory(../test ../test)
 
 set(SRC_LIST 
+    include/MemoryPool.h
+    include/MemoryPoolHeader.h
+    include/MediaMemPool.h
+    include_pri/FragmentBlockMemoryPool.h
+    include_pri/FragmentBlockPool.h
     ${SRC_DIR}/FragmentBlockPool.cpp 
     ${SRC_DIR}/MediaMemPool.cpp
     ${SRC_DIR}/MemoryPool.cpp
@@ -30,7 +57,25 @@ set(SRC_LIST
 
 add_library(memory_pool SHARED ${SRC_LIST})
 
-target_link_libraries(memory_pool boost_thread boost_date_time)
+# using c++17 for shared_mutex
+set_target_properties(memory_pool PROPERTIES CXX_STANDARD 17)
+#目录结构
+function(assign_source_group)
+    foreach(_source IN ITEMS ${ARGN})
+        if (IS_ABSOLUTE "${_source}")
+            file(RELATIVE_PATH _source_rel "${CMAKE_CURRENT_SOURCE_DIR}" "${_source}")
+        else()
+            set(_source_rel "${_source}")
+        endif()
+        get_filename_component(_source_path "${_source_rel}" PATH)
+        string(REPLACE "/" "\\" _source_path_msvc "${_source_path}")
+        source_group("${_source_path_msvc}" FILES "${_source}")
+    endforeach()
+endfunction(assign_source_group)
+
+assign_source_group(${SRC_LIST})
+
+#target_link_libraries(memory_pool boost_thread boost_date_time)
 
 install (TARGETS memory_pool DESTINATION bin)
 install (FILES ./include/MediaMemPool.h 

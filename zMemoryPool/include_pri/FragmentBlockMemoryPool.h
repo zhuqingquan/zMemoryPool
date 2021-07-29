@@ -5,9 +5,18 @@
 #include "MemoryPool.h"
 #include <map>
 #include "FragmentBlockPool.h"
+
+#if _WINDOWS && !HAS_CPP11
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread.hpp>
-#include <boost/date_time/posix_time/posix_time_types.hpp>
+using namespace boost;
+#else
+#include <shared_mutex>
+#include <thread>
+#include <functional>
+using namespace std;
+#endif//#if _WINDOWS && !HAS_CPP11
+
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -44,7 +53,7 @@ public:
 
 	/**
 	 * Method		freeMemory
-	 * @brief		ÊÍ·Å·ÖÅä³öÈ¥µÄÖ¸Õë
+	 * @brief		ï¿½Í·Å·ï¿½ï¿½ï¿½ï¿½È¥ï¿½ï¿½Ö¸ï¿½ï¿½
 	 * @param[in]	void * ptr
 	 * @return		void
 	 */
@@ -52,18 +61,18 @@ public:
 
 	/**
 	 * Method		purgePool
-	 * @brief		Çå¿ÕÄÚ´æ³Ø£¬·µ»¹¸øÏµÍ³
+	 * @brief		ï¿½ï¿½ï¿½ï¿½Ú´ï¿½Ø£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÏµÍ³
 	 * @return		void
 	 */
 	virtual void purgePool();
 
 	/*
-	 * »ñÈ¡ÏòÏµÍ³ÉêÇëµÄÄÚ´æµÄ×ÜºÍ¡£
+	 * ï¿½ï¿½È¡ï¿½ï¿½ÏµÍ³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú´ï¿½ï¿½ï¿½ÜºÍ¡ï¿½
 	 */
 	virtual unsigned int getTotalMemorySize();
 
 	/*
-	 * »ñÈ¡¿éµÄ´óÐ¡¡£
+	 * ï¿½ï¿½È¡ï¿½ï¿½Ä´ï¿½Ð¡ï¿½ï¿½
 	 */
 	virtual unsigned int getSizeOfBlock(void *ptr);
 
@@ -75,11 +84,12 @@ private:
 private:
 	FragmentBlockMemPoolInitParam m_initparam;
 	map<unsigned int, FragmentBlockPool*> m_blockMap;
-	boost::shared_mutex m_lock;
-    boost::posix_time::ptime m_startTs;
+	shared_mutex m_lock;
+	uint64_t m_startTs;
+    //boost::posix_time::ptime m_startTs;
 	//LONGLONG m_freqQuart;
     //HANDLE m_hThread;
-    boost::thread* m_hThread;
+    thread* m_hThread;
     bool m_bRuning;
 	LONGLONG m_hit;
 	LONGLONG m_loss;

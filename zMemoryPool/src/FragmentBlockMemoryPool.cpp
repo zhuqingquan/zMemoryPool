@@ -1,8 +1,27 @@
 
 #include "FragmentBlockMemoryPool.h"
 #include <stdio.h>
+#ifdef _Windows
+#include <boost/date_time/posix_time/posix_time_types.hpp>
+#else
+#include <sys/time.h>
+#include <unistd.h>
+#endif
 
 using namespace zTools;
+
+uint64_t getTimeInMillsec()
+{
+#ifdef _Windows
+    posix_time now = boost::posix_time::microsec_clock::local_time();//get start ts when pool create.
+	return now;
+#else
+	struct timeval now;
+	gettimeofday(&now, nullptr);
+	time_t nowInMillsec = now.tv_sec * 1000 + now.tv_usec / 1000;
+	return (uint64_t)nowInMillsec;
+#endif
+}
 
 FragmentBlockMemoryPool::FragmentBlockMemoryPool(void) 
 : m_hThread(NULL)
@@ -12,10 +31,11 @@ FragmentBlockMemoryPool::FragmentBlockMemoryPool(void)
 	//LARGE_INTEGER freq;
 	//int ret = ::QueryPerformanceFrequency(&freq);
 	//m_freqQuart = freq.QuadPart;
-    m_startTs = boost::posix_time::microsec_clock::local_time();//get start ts when pool create.
+    // m_startTs = boost::posix_time::microsec_clock::local_time();//get start ts when pool create.
+	m_startTs = getTimeInMillsec();
 
 	//m_hThread = CreateThread(NULL,0,(LPTHREAD_START_ROUTINE)timeToFreeThread,this,0,NULL);
-    m_hThread = new boost::thread(boost::bind(&FragmentBlockMemoryPool::timeToFreeThreadCallback, this));
+    m_hThread = new thread(bind(&FragmentBlockMemoryPool::timeToFreeThreadCallback, this));
 }
 
 FragmentBlockMemoryPool::~FragmentBlockMemoryPool(void)
@@ -62,13 +82,13 @@ int FragmentBlockMemoryPool::calculateSize( int size )
 		ret = 500 * 1024;
 	else if(1*1024*1024 >= size)
 		ret = 1*1024*1024;
-	else if((704*576*4+1) >= size)    //D1½âÂëºóÊý¾Ý  Ô¼ 1.58M
-		ret = 704*576*4+8;  //Õâ¸öÖµ±ØÐëÎª 8µÄÕûÊý±¶£¬·ñÔòBoostÎªÁËÂú×ã8×Ö½Ú¶ÔÆë»òÕß4×Ö½Ú¶ÔÆë¿ÉÄÜÔÚÕâ¸öÖµ»ù´¡ÉÏÔÙ³Ë8£¨»òÕß4£©£¬ÏÂÍ¬
+	else if((704*576*4+1) >= size)    //D1ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½  Ô¼ 1.58M
+		ret = 704*576*4+8;  //ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½Îª 8ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½BoostÎªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½8ï¿½Ö½Ú¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½4ï¿½Ö½Ú¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù³ï¿½8ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½4ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¬
 	else if(2*1024*1024 >= size)
 		ret = 2*1024*1024;
-	else if((1024*768*4+1) >= size)		//DVDÊÓÆµ½âÂëºóÊý¾Ý 3M £¨1024*768£©
+	else if((1024*768*4+1) >= size)		//DVDï¿½ï¿½Æµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 3M ï¿½ï¿½1024*768ï¿½ï¿½
 		ret = 1024*768*4+8;				
-	else if((1280*720*4+1) >= size)		//720PÊÓÆµ½âÂëºóÊý¾Ý 3.5M £¨1280*720£©
+	else if((1280*720*4+1) >= size)		//720Pï¿½ï¿½Æµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 3.5M ï¿½ï¿½1280*720ï¿½ï¿½
 		ret = 1280*720*4+8;
 	else if(4*1024*1024 >= size)
 		ret = 4*1024*1024;
@@ -168,7 +188,7 @@ void* FragmentBlockMemoryPool::malloc( std::size_t memorySize)
 
 /**
  * Method		freeMemory
- * @brief		ÊÍ·Å·ÖÅä³öÈ¥µÄÖ¸Õë
+ * @brief		ï¿½Í·Å·ï¿½ï¿½ï¿½ï¿½È¥ï¿½ï¿½Ö¸ï¿½ï¿½
  * @param[in]	void * ptr
  * @return		void
  */
@@ -191,9 +211,11 @@ void FragmentBlockMemoryPool::free( void *ptr )
 	}
 	m_lock.unlock_shared();
     //refresh the ts of the block that malloced before.
-    boost::posix_time::ptime nowTs = boost::posix_time::microsec_clock::local_time();
-    boost::posix_time::time_duration td = nowTs - m_startTs;
-    int durationToStart = td.total_milliseconds();
+    // boost::posix_time::ptime nowTs = boost::posix_time::microsec_clock::local_time();
+    // boost::posix_time::time_duration td = nowTs - m_startTs;
+    // int durationToStart = td.total_milliseconds();
+	uint64_t nowTs = getTimeInMillsec();
+	uint64_t durationToStart = nowTs - m_startTs;
     pBlockHead->ts = durationToStart;
     pBlockHead++;
 	pFragmentBlockPool->releaseBlock((DWORD*)pBlockHead);
@@ -201,7 +223,7 @@ void FragmentBlockMemoryPool::free( void *ptr )
 
 /**
  * Method		purgePool
- * @brief		Çå¿ÕÄÚ´æ³Ø£¬·µ»¹¸øÏµÍ³
+ * @brief		ï¿½ï¿½ï¿½ï¿½Ú´ï¿½Ø£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÏµÍ³
  * @return		void
  */
 void FragmentBlockMemoryPool::purgePool()
@@ -225,7 +247,7 @@ void FragmentBlockMemoryPool::purgePool()
 }
 
 /*
- * »ñÈ¡ÏòÏµÍ³ÉêÇëµÄÄÚ´æµÄ×ÜºÍ¡£
+ * ï¿½ï¿½È¡ï¿½ï¿½ÏµÍ³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú´ï¿½ï¿½ï¿½ÜºÍ¡ï¿½
  */
 unsigned int FragmentBlockMemoryPool::getTotalMemorySize()
 {
@@ -261,8 +283,12 @@ void FragmentBlockMemoryPool::timeToFreeThreadCallback()
 	//unsigned int uiHalfMaxMemorySize = m_uiMaxMemorySize / 2;
 	while(true == m_bRuning)
 	{
-		//Sleep(10);
-        boost::this_thread::sleep(boost::posix_time::millisec(10));
+		#ifdef _Windows
+		Sleep(10);
+        // boost::this_thread::sleep(boost::posix_time::millisec(10));
+		#else
+		usleep(10 * 1000);
+		#endif
 		count ++;
 		if(100 > count)
 			continue;
@@ -275,9 +301,11 @@ void FragmentBlockMemoryPool::timeToFreeThreadCallback()
 			continue;
 		}
 		//::QueryPerformanceCounter(&systemTime);
-        boost::posix_time::ptime nowTs = boost::posix_time::microsec_clock::local_time();
-        boost::posix_time::time_duration toStart = nowTs - m_startTs;
-        int llToStart = toStart.total_milliseconds();
+        // boost::posix_time::ptime nowTs = boost::posix_time::microsec_clock::local_time();
+        // boost::posix_time::time_duration toStart = nowTs - m_startTs;
+        // int llToStart = toStart.total_milliseconds();
+		uint64_t nowTs = getTimeInMillsec();
+		int llToStart = nowTs - m_startTs;
 		for(iter = m_blockMap.begin();
 			iter != m_blockMap.end();
 			++iter)

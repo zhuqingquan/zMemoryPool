@@ -9,9 +9,17 @@ typedef unsigned int DWORD;
 typedef long long LONGLONG;
 #endif
 
+
 #include <inttypes.h>
 #include <vector>
+
+#if _WINDOWS && !HAS_CPP11
 #include <boost/thread/mutex.hpp>
+using namespace boost;
+#else
+#include <mutex>
+using namespace std;
+#endif
 
 namespace zTools
 {
@@ -43,7 +51,7 @@ public:
         unsigned int size;
         unsigned int ts;    //timestamp of free
     };
-	static DWORD s_BlockFlag;//标志位。
+	static DWORD s_BlockFlag;//锟斤拷志位锟斤拷
 private:
 	DWORD *newBlock();
 	int releaseAllBlock();
@@ -56,7 +64,7 @@ private:
 	unsigned int m_uiNewSizeOfBlock;
 	unsigned int m_uiNewDWORDCountOfBlock;
 	vector<DWORD*> m_pMemory;
-	boost::mutex m_lock;
+	mutex m_lock;
 	int m_llLastUseTime;
 };
 

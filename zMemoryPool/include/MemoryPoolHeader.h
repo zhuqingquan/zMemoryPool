@@ -12,4 +12,19 @@
 #define MEMORYPOOL_EXPORT_IMPORT 
 #endif //_WINDOWS
 
+#ifndef HAS_CPP11
+#	ifdef _MSVC_LANG
+#		if _MSVC_LANG > 199711L
+#			define HAS_CPP11 1
+#		else
+#			define HAS_CPP11 0
+#		endif
+#	esle
+#		if __cplusplus > 199711
+#			define HAS_CPP11	1
+#		else
+#			define HAS_CPP11 0
+#		endif
+#	endif
 #endif
+#endif//#define _MEMORYPOOLHEADER_
