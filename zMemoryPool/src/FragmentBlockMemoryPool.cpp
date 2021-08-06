@@ -1,8 +1,9 @@
 
 #include "FragmentBlockMemoryPool.h"
 #include <stdio.h>
-#ifdef _Windows
-#include <boost/date_time/posix_time/posix_time_types.hpp>
+#include <algorithm>
+#ifdef _WINDOWS
+#pragma comment(lib, "Winmm.lib")
 #else
 #include <sys/time.h>
 #include <unistd.h>
@@ -12,9 +13,8 @@ using namespace zTools;
 
 uint64_t getTimeInMillsec()
 {
-#ifdef _Windows
-    posix_time now = boost::posix_time::microsec_clock::local_time();//get start ts when pool create.
-	return now;
+#ifdef _WINDOWS
+	return timeGetTime();
 #else
 	struct timeval now;
 	gettimeofday(&now, nullptr);
@@ -28,21 +28,13 @@ FragmentBlockMemoryPool::FragmentBlockMemoryPool(void)
 , m_bRuning(true)
 , m_hit(0), m_loss(0)
 {
-	//LARGE_INTEGER freq;
-	//int ret = ::QueryPerformanceFrequency(&freq);
-	//m_freqQuart = freq.QuadPart;
-    // m_startTs = boost::posix_time::microsec_clock::local_time();//get start ts when pool create.
 	m_startTs = getTimeInMillsec();
-
-	//m_hThread = CreateThread(NULL,0,(LPTHREAD_START_ROUTINE)timeToFreeThread,this,0,NULL);
     m_hThread = new thread(bind(&FragmentBlockMemoryPool::timeToFreeThreadCallback, this));
 }
 
 FragmentBlockMemoryPool::~FragmentBlockMemoryPool(void)
 {
 	m_bRuning = false;
-	//WaitForSingleObject(m_hThread, INFINITE);
-	//CloseHandle(m_hThread);
     if(m_hThread)
     {
         m_hThread->join();
@@ -57,7 +49,7 @@ unsigned int calsize(unsigned int need, const std::vector<unsigned int>& sortedL
 	unsigned int result = ((need + 32 - 1) & (~(32 - 1)));
 	for (size_t i=0; i<sortedLine.size(); i++)
 	{
-		if(sortedLine[i]>need)
+		if(sortedLine[i]>=need)
 		{
 			return sortedLine[i];
 		}
@@ -136,6 +128,9 @@ void* FragmentBlockMemoryPool::malloc( std::size_t memorySize)
 		return NULL;
 	//unsigned int size = calculateSize(memorySize);
 	unsigned int size = calsize(memorySize, m_initparam.blockSizes);
+// 	char logMsg[512] = {0};
+// 	sprintf(logMsg, "MemoryPool: malloc %u byte = %u KB, real malloc %u KB", memorySize, memorySize / 1024, size / 1024);
+// 	OutputDebugString(logMsg);
 	map<unsigned int, FragmentBlockPool*>::iterator iter;
 	FragmentBlockPool *pFragmentBlockPool = NULL;
 	m_lock.lock_shared();
@@ -177,6 +172,9 @@ void* FragmentBlockMemoryPool::malloc( std::size_t memorySize)
 		m_lock.unlock();
 		//InterlockedIncrement64(&m_loss);
         m_loss++;
+// 		char logMsg[512] = {0};
+// 		sprintf(logMsg, "MemoryPool: real alloc %u KB", uiSizeOfNew / 1024);
+// 		OutputDebugString(logMsg);
 	}
 	else
 	{
@@ -216,7 +214,7 @@ void FragmentBlockMemoryPool::free( void *ptr )
     // int durationToStart = td.total_milliseconds();
 	uint64_t nowTs = getTimeInMillsec();
 	uint64_t durationToStart = nowTs - m_startTs;
-    pBlockHead->ts = durationToStart;
+    pBlockHead->ts = (unsigned int)durationToStart;
     pBlockHead++;
 	pFragmentBlockPool->releaseBlock((DWORD*)pBlockHead);
 }
@@ -283,12 +281,11 @@ void FragmentBlockMemoryPool::timeToFreeThreadCallback()
 	//unsigned int uiHalfMaxMemorySize = m_uiMaxMemorySize / 2;
 	while(true == m_bRuning)
 	{
-		#ifdef _Windows
+#ifdef _WINDOWS
 		Sleep(10);
-        // boost::this_thread::sleep(boost::posix_time::millisec(10));
-		#else
+#else
 		usleep(10 * 1000);
-		#endif
+#endif
 		count ++;
 		if(100 > count)
 			continue;
@@ -300,12 +297,8 @@ void FragmentBlockMemoryPool::timeToFreeThreadCallback()
 			m_lock.unlock_shared();
 			continue;
 		}
-		//::QueryPerformanceCounter(&systemTime);
-        // boost::posix_time::ptime nowTs = boost::posix_time::microsec_clock::local_time();
-        // boost::posix_time::time_duration toStart = nowTs - m_startTs;
-        // int llToStart = toStart.total_milliseconds();
 		uint64_t nowTs = getTimeInMillsec();
-		int llToStart = nowTs - m_startTs;
+		int llToStart = (int)(nowTs - m_startTs);
 		for(iter = m_blockMap.begin();
 			iter != m_blockMap.end();
 			++iter)

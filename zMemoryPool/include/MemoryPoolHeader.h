@@ -19,7 +19,7 @@
 #		else
 #			define HAS_CPP11 0
 #		endif
-#	esle
+#	else
 #		if __cplusplus > 199711
 #			define HAS_CPP11	1
 #		else

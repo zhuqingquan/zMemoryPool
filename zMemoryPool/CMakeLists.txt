@@ -7,8 +7,11 @@ set(memory_pool_VERSION_MAJOR 1)
 set(memory_pool_VERSION_MINOR 0)
 
 if(MSVC90)
-    set(BOOST_INC "${PROJECT_SOURCE_DIR}/../pcmediatrans-boost/include/boost-1_71")
-    set(BOOST_LIB "${PROJECT_SOURCE_DIR}/../pcmediatrans-boost/lib")
+    if(NOT DEFINED BOOST_DIR)
+        message(FATAL_ERROR "Must define BOOST_DIR for boost root director when compile using vs2008")
+    endif()
+    set(BOOST_INC "${BOOST_DIR}/include")
+    set(BOOST_LIB "${BOOST_DIR}/lib")
 endif()
 
 #configure a header file to pass some of the CMake settings
@@ -27,9 +30,11 @@ include_directories(
     ${INC_DIR}
 )
 
-link_directories(
-    "${BOOST_LIB}"
-)
+if(MSVC90)
+    link_directories(
+        "${BOOST_LIB}"
+    )
+endif()
 
 if (MSVC)
     add_definitions(
@@ -56,6 +61,12 @@ set(SRC_LIST
 )
 
 add_library(memory_pool SHARED ${SRC_LIST})
+
+if(MSVC)
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD /Od")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
+    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /DEBUG /OPT:REF /OPT:ICF")
+endif()
 
 # using c++17 for shared_mutex
 set_target_properties(memory_pool PROPERTIES CXX_STANDARD 17)

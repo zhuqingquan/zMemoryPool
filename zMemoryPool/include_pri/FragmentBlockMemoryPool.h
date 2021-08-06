@@ -2,25 +2,32 @@
 #ifndef _ZTOOLS_FRAGMENT_BLOCK_MEMORY_POOL_H_
 #define _ZTOOLS_FRAGMENT_BLOCK_MEMORY_POOL_H_
 
-#include "MemoryPool.h"
 #include <map>
+#include "MemoryPool.h"
 #include "FragmentBlockPool.h"
 
-#if _WINDOWS && !HAS_CPP11
+#if _WINDOWS 
+#include <windows.h>
+
+#if !HAS_CPP11
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread.hpp>
+
 using namespace boost;
 #else
+#include <inttypes.h>
+#include <shared_mutex>
+#include <thread>
+#include <functional>
+using namespace std;
+#endif//!HAS_CPP11
+
+#else//NO _WINDOWS
 #include <shared_mutex>
 #include <thread>
 #include <functional>
 using namespace std;
 #endif//#if _WINDOWS && !HAS_CPP11
-
-#ifdef _WINDOWS
-#include <windows.h>
-#endif
-#include <inttypes.h>
 
 namespace zTools
 {

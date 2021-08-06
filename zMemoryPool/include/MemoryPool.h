@@ -13,8 +13,6 @@
 #include <string>
 #include "MemoryPoolHeader.h"
 
-using namespace std;
-
 namespace zTools
 {
 	/**
@@ -22,7 +20,7 @@ namespace zTools
 	 * @brief	Params use to init memory pool
 	 *			Specify memory pool have specify init param
 	 **/
-	class MemPoolInitParam
+	class MEMORYPOOL_EXPORT_IMPORT MemPoolInitParam
 	{
 	public:
 		virtual ~MemPoolInitParam() = 0;
@@ -52,6 +50,12 @@ namespace zTools
 		* @return		创建的MemoryPool对象
 		*/
 		static MemoryPool* CreateMemoryPool(const char* typeName);
+
+		/**
+		* Method		ReleaseMemoryPool
+		* @brief		release MemoryPool obj
+		*/
+		static void ReleaseMemoryPool(MemoryPool** mempool);
 
 		/**
 		* Method		init

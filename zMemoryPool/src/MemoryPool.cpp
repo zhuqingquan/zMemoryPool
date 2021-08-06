@@ -30,3 +30,12 @@ MemoryPool* MemoryPool::CreateMemoryPool(const char* typeName)
 {
 	return new FragmentBlockMemoryPool();//new SOA::BoostMemoryPool::BoostMemoryPool();
 }
+
+void MemoryPool::ReleaseMemoryPool(MemoryPool** mempool)
+{
+	if(mempool!=NULL && *mempool!=NULL)
+	{
+		delete mempool;
+		*mempool = NULL;
+	}
+}

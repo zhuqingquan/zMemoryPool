@@ -25,6 +25,12 @@ typedef struct _MediaMempoolInitParam
 MEMORYPOOL_EXPORT_IMPORT bool MediaMempool_init(MediaMempoolInitParam* initparam);
 
 /**
+ *	@name	MediaMempool_deinit
+ *	@brief	deinit memory pool. after deinit, all allocate will failed.
+ **/
+MEMORYPOOL_EXPORT_IMPORT void MediaMempool_deinit();
+
+/**
  * Method		MediaMempool_malloc
  * @brief		在MemoryPool中申请内存空间
  * @param[in]	unsigned long nSize 申请的内存空间的大小

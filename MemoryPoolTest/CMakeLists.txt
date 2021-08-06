@@ -14,13 +14,19 @@ project(MemoryPoolTest)
 #    )
 
 set(SRC_DIR .)
-set(INC_DIR "../zMemoryPool/include")
+set(INC_DIR "${PROJECT_BINARY_DIR}/zMemoryPool/include")
 
-set(BOOST_INC "/usr/local/include/")
-set(BOOST_LIB "/usr/local/lib")
+if(MSVC90)
+    if(NOT DEFINED BOOST_DIR)
+        message(FATAL_ERROR "Must define BOOST_DIR for boost root director when compile using vs2008")
+    endif()
+    set(BOOST_INC "${BOOST_DIR}/include")
+    set(BOOST_LIB "${BOOST_DIR}/lib")
+    include_directories("${BOOST_INC}")
+endif()
 
 include_directories("${PROJECT_BINARY_DIR}")
-include_directories("${BOOST_INC}" "./" "../zMemoryPool/include_pri" "../zMemoryPool/include")
+include_directories("./" "../zMemoryPool/include_pri" "../zMemoryPool/include")
 link_directories("../zMemoryPool/" "${BOOST_LIB}")
 
 #add_subdirectory(../test ../test)
@@ -31,12 +37,7 @@ set(SRC_LIST
 
 add_executable(MemoryPoolTest ${SRC_LIST})
 
-target_link_libraries(MemoryPoolTest memory_pool 
-    boost_thread 
-    boost_date_time 
-    boost_system.a 
-    pthread
-    )
+target_link_libraries(MemoryPoolTest memory_pool)
 
 #install (TARGETS memory_pool DESTINATION bin)
 #install (FILES ./include/MediaMemPool.h 

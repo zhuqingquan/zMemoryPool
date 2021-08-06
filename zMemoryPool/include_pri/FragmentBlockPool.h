@@ -2,23 +2,24 @@
 #ifndef _ZTOOLS_FRAGMEN_BLOCK_POOL_H_
 #define _ZTOOLS_FRAGMEN_BLOCK_POOL_H_
 
-#ifdef _WINDOWS
-#include <windows.h>
-#else
-typedef unsigned int DWORD;
-typedef long long LONGLONG;
-#endif
-
-
-#include <inttypes.h>
 #include <vector>
+#include "MemoryPoolHeader.h"
 
-#if _WINDOWS && !HAS_CPP11
+#if _WINDOWS 
+#include <windows.h>
+
+#if !HAS_CPP11
 #include <boost/thread/mutex.hpp>
-using namespace boost;
+typedef boost::mutex mutex;
+#else
+#include <inttypes.h>
+#include <mutex>
+#endif // !HAS_CPP11
+
 #else
 #include <mutex>
-using namespace std;
+typedef unsigned int DWORD;
+typedef long long LONGLONG;
 #endif
 
 namespace zTools

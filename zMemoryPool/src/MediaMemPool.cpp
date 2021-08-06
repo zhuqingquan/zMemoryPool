@@ -22,7 +22,7 @@ zTools::MemoryPool* getMemoryPoolInstance()
 
 bool MediaMempool_init(MediaMempoolInitParam* initparam)
 {	
-	if(initparam==NULL || initparam->sizeArrayCount<=0 || initparam->blockSizeArray)
+	if(initparam==NULL || initparam->sizeArrayCount<=0 || initparam->blockSizeArray==NULL)
 		return false;
 	zTools::MemoryPool* pool = getMemoryPoolInstance();
 	zTools::FragmentBlockMemPoolInitParam* fbinitparam = new zTools::FragmentBlockMemPoolInitParam();
@@ -33,20 +33,30 @@ bool MediaMempool_init(MediaMempoolInitParam* initparam)
 	return pool->init(fbinitparam);
 }
 
+void MediaMempool_deinit()
+{	
+	zTools::MemoryPool* pool = getMemoryPoolInstance();
+	if(pool!=NULL)
+	{
+		zTools::MemoryPool::ReleaseMemoryPool(&pool);
+		MediaMemPoolInstance = NULL;
+	}
+}
+
 void* MediaMempool_malloc(unsigned long nSize)
 {
 	zTools::MemoryPool* pool = getMemoryPoolInstance();
-	return pool->malloc(nSize);
+	return pool!=NULL ? pool->malloc(nSize) : NULL;
 }
 
 void  MediaMempool_free(void* memory)
 {
 	zTools::MemoryPool* pool = getMemoryPoolInstance();
-	pool->free(memory);
+	if(pool!=NULL) pool->free(memory);
 }
 
 void MediaMempool_purgePool()
 {
 	zTools::MemoryPool* pool = getMemoryPoolInstance();
-	pool->purgePool();
+	if(pool!=NULL) pool->purgePool();
 }
