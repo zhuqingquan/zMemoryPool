@@ -49,6 +49,7 @@ endif()
 #add_subdirectory(../test ../test)
 
 set(SRC_LIST 
+    include/ObjectPool.h
     include/MemoryPool.h
     include/MemoryPoolHeader.h
     include/MediaMemPool.h
@@ -92,4 +93,5 @@ install (TARGETS memory_pool DESTINATION bin)
 install (FILES ./include/MediaMemPool.h 
     ./include/MemoryPool.h 
     ./include/MemoryPoolHeader.h 
+    ./include/ObjectPool.h
     DESTINATION include)
