@@ -35,7 +35,7 @@ void MemoryPool::ReleaseMemoryPool(MemoryPool** mempool)
 {
 	if(mempool!=NULL && *mempool!=NULL)
 	{
-		delete mempool;
+		delete (*mempool);
 		*mempool = NULL;
 	}
 }
