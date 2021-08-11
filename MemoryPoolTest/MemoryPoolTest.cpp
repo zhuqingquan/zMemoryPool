@@ -33,9 +33,28 @@ unsigned int calsize(unsigned int need, const std::vector<unsigned int>& sortedL
 	return result;
 }
 
+struct MediaFrame
+{
+	uint64_t pts;
+	uint64_t dts;
+	uint32_t length;
+};//struct MediaFrame
+
 int main(int argc, char* argv[])
 {
-	zTools::ObjectPool<int> objpool_int(2);
+	zTools::ObjectPool<MediaFrame> objpool_int(2);
+
+	MediaFrame* f1 = objpool_int.get();
+	f1->pts = 1;
+	MediaFrame* f2 = objpool_int.get();
+	f2->pts = 2;
+	MediaFrame* f3 = objpool_int.get();
+	f3->pts = 3;
+	objpool_int.put(f2);
+	objpool_int.put(f3);
+	MediaFrame* f4 = objpool_int.get();
+	if(f4->pts != 3)
+		assert(true);
 
 
 	zTools::MemoryPool* pool = zTools::MemoryPool::CreateMemoryPool("FragmentBlock");
