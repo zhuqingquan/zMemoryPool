@@ -1,7 +1,7 @@
 /*
  * @Author: zhuqingquan
  * @Date: 2021-08-08 19:36:47
- * @LastEditTime: 2021-08-12 00:30:18
+ * @LastEditTime: 2021-11-21 14:58:42
  * @Description:  Template for different type Object poll.
  */
 #ifndef _Z_OBJECT_POOL_H_
@@ -9,6 +9,8 @@
 
 #include <deque>
 #include <mutex>
+#include <numeric>
+#include <iostream>
 
 namespace zTools
 {
@@ -27,6 +29,9 @@ public:
      **/
     void onGetObj()
     {
+        m_objCountInPool--;
+        m_objCountOutedPool++;
+        ++m_getCountContinue;
     }
 
     /**
@@ -34,7 +39,22 @@ public:
      **/
     void onPutObj()
     {
+        m_objCountInPool++;
+        m_objCountOutedPool--;
 
+        if(m_getCountContinue>m_getCountMax)
+            m_getCountMax = m_getCountContinue;
+        if(m_getCountContinue>0)
+        {
+            m_getCountContinuesList.push_back(m_getCountContinue);
+            if(m_getCountContinuesList.size()>COUNT_MAX)
+                m_getCountContinuesList.pop_front();
+        }
+        m_getCountContinue = 0;
+
+        if(m_objCountInPoolWhenPut.size()>=COUNT_MAX)
+            m_objCountInPoolWhenPut.pop_front();
+        m_objCountInPoolWhenPut.push_back(m_objCountInPool);
     }
 
     /**
@@ -42,7 +62,9 @@ public:
      **/
     void onMalloc(size_t count)
     {
-
+        m_totalMalloc += count;
+        m_curExistObjCount += count;
+        m_objCountInPool += count;
     }
 
     /**
@@ -50,7 +72,9 @@ public:
      **/
     void onFree(size_t count)
     {
-        
+        m_totalFree += count;
+        m_curExistObjCount -= count;
+        m_objCountInPool -= count;
     }
 
     /**
@@ -58,7 +82,11 @@ public:
      **/
     int getMallocCount()
     {
-        return m_initCount;
+        if(m_getCountContinuesList.size()<=0)
+            return m_initCount;
+        double avgGetCountContinues = std::accumulate(m_getCountContinuesList.begin(), m_getCountContinuesList.end(), 0.0) / (double)m_getCountContinuesList.size();
+        std::cout << "Malloc count=" << (int)avgGetCountContinues + 1 << " Total=" << m_totalMalloc << std::endl;
+        return (int)(avgGetCountContinues * factor_GetCountContinues);
     }
 
     /**
@@ -66,12 +94,37 @@ public:
      **/
     int getFreeCount()
     {
-       return 0; 
+        const double dunplateRatio = 0.3;
+        double avgGetCountContinues = std::accumulate(m_getCountContinuesList.begin(), m_getCountContinuesList.end(), 0.0) / (double)m_getCountContinuesList.size();
+        int toFree =  avgGetCountContinues * (1 + dunplateRatio) ;
+        if(m_objCountInPool <= toFree)
+        {
+            return 0;
+        }
+        double avgObjCountInPoolWhenPut = std::accumulate(m_objCountInPoolWhenPut.begin(), m_objCountInPoolWhenPut.end(), 0.0) / (double)m_objCountInPoolWhenPut.size();
+        int result = avgObjCountInPoolWhenPut - toFree;
+        if(result>0)
+        {
+            std::cout << "Free count=" << result << " avg whenPut=" << avgObjCountInPoolWhenPut << " avg getCountContinues=" << avgGetCountContinues << std::endl;
+        }
+        return result;
     }
 
 private:
+    const float factor_GetCountContinues = 2.0f; // 持续声请的个数乘以此系数得到下次申请时应该申请的个数
     int m_initCount = 2;
-    int m_curObjCount = 2;
+    int m_curExistObjCount = 0; // 当前还未释放的对象个数
+    int m_totalMalloc = 0;      // 总共申请的对象的个数
+    int m_totalFree = 0;       // 已经释放的对象的个数
+    int m_objCountInPool = 0;       // 还在池中的对象个数
+    int m_objCountOutedPool = 0;    // 已经被用户申请正在使用的对象个数
+
+    int m_getCountContinue = 0;
+    int m_getCountMax = 0;
+    std::list<int> m_getCountContinuesList;     // 每次连续申请最终m_getCountContinue清0时将旧值保持到队列中
+
+    const size_t COUNT_MAX = 100; 
+    std::list<int> m_objCountInPoolWhenPut;
 };//class poolStrategy
 
 /**
@@ -127,11 +180,21 @@ public:
         std::lock_guard<std::mutex> lock(m_mutex);
         m_queue.push_front(obj);
         m_strategy.onPutObj();
+        // 当把Obj对象放回Pool中时，不用对Pool中可能冗余的对象进行回收
+        // 频繁的去判断是否需要回收可能造成更多的执行指令而影响性能
+        // 而且快速的回收会导致下次请求时又要再次去系统申请内存
+        // int count = m_strategy.getFreeCount();
+        // if(count>0)
+            // freeObjs(count);
+    }
+
+    void gc()
+    {
+        // 回收部分对象
         int count = m_strategy.getFreeCount();
         if(count>0)
             freeObjs(count);
     }
-
 private:
     void mallocObjs(size_t count)
     {
@@ -144,13 +207,15 @@ private:
 
     void freeObjs(size_t count)
     {
+        int freed = 0;
         while (m_queue.size() > 1 && (count--) > 0)
         {
             T* obj = m_queue.back();
             m_queue.pop_back();
             delete obj;
+            ++freed;
         }
-        
+        m_strategy.onFree(freed);
     }
 
 private:
@@ -189,6 +254,13 @@ public:
         m_impl.put(obj);
     }
 
+    /**
+     * @brief   Garbage collection. 回收部分内存 
+     */
+    void gc()
+    {
+        m_impl.gc();
+    }
 private:
     // disable copy constructor and assignd
     ObjectPool& operator=(const ObjectPool&);
