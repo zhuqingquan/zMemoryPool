@@ -40,8 +40,60 @@ struct MediaFrame
 	uint32_t length;
 };//struct MediaFrame
 
+zTools::ObjectPool<MediaFrame> gObjpoolFrame(2);
+void objpool_malloc_free_random()
+{
+	size_t count = 1000;
+	const size_t MALLOC_TIMES_MAX = 90;
+	std::list<MediaFrame*> frames;
+	srand((uint32_t)time(nullptr));
+	while(count--)
+	{
+		int mallocTimes = (rand() % MALLOC_TIMES_MAX) + 1;
+		for (int i = 0; i < mallocTimes; i++)
+		{
+			frames.push_back(gObjpoolFrame.get());
+		}
+
+		int sleepMs = (rand() % 50);
+		Sleep(sleepMs);
+
+		int freeTimes = (rand() % MALLOC_TIMES_MAX) + 1;
+		for (int i = 0; i < freeTimes; i++)
+		{
+			if(frames.size()<=0)
+				break;
+			gObjpoolFrame.put(frames.front());
+
+			frames.pop_front();
+		}
+		while (frames.size() > 2 * MALLOC_TIMES_MAX)
+		{
+			gObjpoolFrame.put(frames.front());
+			frames.pop_front();
+		}
+	}
+	std::cout << "Thread done. frames.count=" << frames.size() << " " << __FUNCTION__ << std::endl;
+}
+
+void simulate_objectPool_malloc_free()
+{
+	srand((unsigned int)time(nullptr));
+	const size_t threadCount = 1;
+	std::vector<thread*> threadList;
+	for (size_t i = 0; i < threadCount; i++)
+	{
+		//thread* th = new thread(objpool_malloc_free_random);
+		//threadList.push_back(th);
+		thread th(objpool_malloc_free_random);
+		th.detach();
+	}
+	
+}
+
 int main(int argc, char* argv[])
 {
+	/*
 	zTools::ObjectPool<MediaFrame> objpool_int(2);
 
 	MediaFrame* f1 = objpool_int.get();
@@ -56,7 +108,10 @@ int main(int argc, char* argv[])
 	if(f4->pts != 3)
 		assert(true);
 
+	*/
+	simulate_objectPool_malloc_free();
 
+	system("pause");
 	zTools::MemoryPool* pool = zTools::MemoryPool::CreateMemoryPool("FragmentBlock");
 	zTools::FragmentBlockMemPoolInitParam* initparam = new zTools::FragmentBlockMemPoolInitParam();
 	initparam->blockSizes.push_back(4);
