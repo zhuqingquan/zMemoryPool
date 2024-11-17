@@ -1,6 +1,5 @@
 /*
  * @file	MemoryPool.h
- * @author	lei jian hui
  * @date	2011-11-21  10:46
  * @brief	内存池实现类
  * @Copyright (C) 2011, by Ragile Corporation
@@ -11,6 +10,7 @@
 #define _ZTOOLS_MemoryPool_H__
 
 #include <string>
+#include <mutex>
 #include "MemoryPoolHeader.h"
 
 namespace zTools
@@ -105,7 +105,7 @@ namespace zTools
 		*/
 		MemoryPool();
 
-		unsigned int m_uiAllMemorySize;//向系统申请的，所有内存的总和。
+		std::atomic<uint64_t> m_uiAllMemorySize;//向系统申请的，所有内存的总和。
 		unsigned int m_uiMaxMemorySize;//大概最大能向系统申请的内存。
 	};
 

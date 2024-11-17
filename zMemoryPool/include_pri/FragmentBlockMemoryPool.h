@@ -54,38 +54,25 @@ public:
 	FragmentBlockMemoryPool(void);
 	virtual ~FragmentBlockMemoryPool(void);
 
-	virtual bool init(MemPoolInitParam* param);
-
-	virtual void* malloc( std::size_t memorySize);
-
-	/**
-	 * Method		freeMemory
-	 * @brief		�ͷŷ����ȥ��ָ��
-	 * @param[in]	void * ptr
-	 * @return		void
-	 */
-	virtual void free( void *ptr );
+	virtual bool init(MemPoolInitParam* param) override;
+	virtual void* malloc( std::size_t memorySize) override;
+	virtual void free( void *ptr ) override;
 
 	/**
 	 * Method		purgePool
-	 * @brief		����ڴ�أ�������ϵͳ
+	 * @brief		清空内存池，返还给系统
 	 * @return		void
 	 */
 	virtual void purgePool();
 
-	/*
-	 * ��ȡ��ϵͳ������ڴ���ܺ͡�
-	 */
 	virtual unsigned int getTotalMemorySize();
 
-	/*
-	 * ��ȡ��Ĵ�С��
-	 */
 	virtual unsigned int getSizeOfBlock(void *ptr);
 
 public:
 	void timeToFreeThreadCallback();
 private:
+	void releasePool();
 	int calculateSize( int size );
 	static DWORD timeToFreeThread(void *pParam);
 private:
@@ -94,12 +81,10 @@ private:
 	shared_mutex m_lock;
 	uint64_t m_startTs;
     //boost::posix_time::ptime m_startTs;
-	//LONGLONG m_freqQuart;
-    //HANDLE m_hThread;
     thread* m_hThread;
     bool m_bRuning;
-	LONGLONG m_hit;
-	LONGLONG m_loss;
+	std::atomic<uint64_t> m_hit;
+	std::atomic<uint64_t> m_loss;
 };
 
 }//namespace zTools

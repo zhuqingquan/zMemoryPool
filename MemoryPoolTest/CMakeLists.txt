@@ -27,7 +27,6 @@ endif()
 
 include_directories("${PROJECT_BINARY_DIR}")
 include_directories("./" "../zMemoryPool/include_pri" "../zMemoryPool/include")
-link_directories("../zMemoryPool/" "${BOOST_LIB}")
 
 #add_subdirectory(../test ../test)
 

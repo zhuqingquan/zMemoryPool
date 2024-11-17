@@ -1,7 +1,7 @@
 /*
  * @Author: zhuqingquan
  * @Date: 2021-08-08 19:36:47
- * @LastEditTime: 2021-11-21 14:58:42
+ * @LastEditTime: 2024-11-16 19:23:05
  * @Description:  Template for different type Object poll.
  */
 #ifndef _Z_OBJECT_POOL_H_
@@ -113,10 +113,10 @@ public:
 private:
     const float factor_GetCountContinues = 2.0f; // 持续声请的个数乘以此系数得到下次申请时应该申请的个数
     int m_initCount = 2;
-    int m_curExistObjCount = 0; // 当前还未释放的对象个数
-    int m_totalMalloc = 0;      // 总共申请的对象的个数
-    int m_totalFree = 0;       // 已经释放的对象的个数
-    int m_objCountInPool = 0;       // 还在池中的对象个数
+    size_t m_curExistObjCount = 0; // 当前还未释放的对象个数
+    size_t m_totalMalloc = 0;      // 总共申请的对象的个数
+    size_t m_totalFree = 0;       // 已经释放的对象的个数
+    size_t m_objCountInPool = 0;       // 还在池中的对象个数
     int m_objCountOutedPool = 0;    // 已经被用户申请正在使用的对象个数
 
     int m_getCountContinue = 0;

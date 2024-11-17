@@ -21,14 +21,12 @@ FragmentBlockPool::~FragmentBlockPool(void)
 
 int FragmentBlockPool::releaseAllBlock()
 {
-	DWORD *pDW = NULL;
 	int bytescount = 0;
 	for(vector<DWORD*>::iterator iter = m_pMemory.begin();
 		iter != m_pMemory.end();
 		++iter)
 	{
-		pDW = *iter;
-        FragBlockHead* pHead = (FragBlockHead*)pDW;
+        FragBlockHead* pHead = (FragBlockHead*)*iter;
         pHead--;
         bytescount += pHead->size;
 		free(pHead);
@@ -121,8 +119,7 @@ DWORD *FragmentBlockPool::getBlock(unsigned int &uiSizeOfNew)
 			uiSizeOfNew = m_uiNewSizeOfBlock;
 			break;
 		}
-		vector<DWORD*>::reference ref = m_pMemory.back();
-		pRet = ref;
+		pRet = m_pMemory.back();
 		m_pMemory.pop_back();
 	} while (false);
 	m_lock.unlock();

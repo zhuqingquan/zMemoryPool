@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include "ObjectPool.h"
+#include "MediaMemPool.h"
 
 unsigned int calsize(unsigned int need, const std::vector<unsigned int>& sortedLine)
 {
@@ -91,8 +92,33 @@ void simulate_objectPool_malloc_free()
 	
 }
 
+void test_MediaMempoolInitParam()
+{
+	MediaMempoolInitParam param;
+	param.sizeArrayCount = 3;
+	param.blockSizeArray = (unsigned long*)malloc(param.sizeArrayCount * sizeof(unsigned long));
+	param.blockSizeArray[0] = 1024;
+	param.blockSizeArray[0] = 1024 * 4;
+	param.blockSizeArray[0] = 1024 * 1024;
+
+	MediaMempool_init(&param);
+
+	void* p = MediaMempool_malloc(128);
+
+	MediaMempool_free(p);
+
+	MediaMempool_purgePool();
+
+	MediaMempool_deinit();
+
+	p = MediaMempool_malloc(1024 * 128);
+
+	MediaMempool_free(p);
+
+}
 int main(int argc, char* argv[])
 {
+	test_MediaMempoolInitParam();
 	/*
 	zTools::ObjectPool<MediaFrame> objpool_int(2);
 
