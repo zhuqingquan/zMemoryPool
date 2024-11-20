@@ -57,7 +57,7 @@ void objpool_malloc_free_random()
 		}
 
 		int sleepMs = (rand() % 50);
-		Sleep(sleepMs);
+		std::this_thread::sleep_for(std::chrono::milliseconds(sleepMs));
 
 		int freeTimes = (rand() % MALLOC_TIMES_MAX) + 1;
 		for (int i = 0; i < freeTimes; i++)
@@ -187,18 +187,18 @@ int main(int argc, char* argv[])
 			rnum = (rnum % (max-min)) + min;
 			buf = (char*)pool->malloc(rnum);
 			allocatedBufs.push_back(buf);
-			Sleep(10);
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		}
 		
 		for (size_t i=0; i<tcount; i++)
 		{
 			pool->free(allocatedBufs.front());
 			allocatedBufs.pop_front();
-			Sleep(10);
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		}
         printf("now to purge pool.\n");
         pool->purgePool();
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 	return 0;
 }

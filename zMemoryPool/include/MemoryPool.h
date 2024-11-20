@@ -11,6 +11,7 @@
 
 #include <string>
 #include <mutex>
+#include <atomic>
 #include "MemoryPoolHeader.h"
 
 namespace zTools
